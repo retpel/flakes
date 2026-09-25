@@ -142,7 +142,8 @@ in
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
-      path = cfg.extraPackages;
+      # The nouride CLI too, so agents can reach it through `exec` (and the `nouride` tool).
+      path = [ cfg.package ] ++ cfg.extraPackages;
 
       environment = {
         HOME = cfg.stateDir;
