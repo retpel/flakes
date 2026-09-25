@@ -1,0 +1,44 @@
+name: Update
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "Packages to update (space-separated, empty for all)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Update packages
+        env:
+          PACKAGES: ${{ github.event.inputs.packages }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for script in pkgs/*/update.sh; do
+            name="$(basename "$(dirname "$script")")"
+            if [ -n "${PACKAGES:-}" ] && [[ " $PACKAGES " != *" $name "* ]]; then continue; fi
+            "$script"
+            git diff --quiet -- "pkgs/$name" && continue
+            version="$(jq -r .version "pkgs/$name/hashes.json" 2>/dev/null || echo new)"
+            if nix build -L ".#packages.x86_64-linux.$name" && nix flake check --all-systems --no-build; then
+              git commit -m "Update $name to v$version" -- "pkgs/$name"
+            else
+              echo "::error::$name failed to build after update"
+              git checkout -- "pkgs/$name"
+            fi
+          done
+          git push
