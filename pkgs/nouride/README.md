@@ -43,11 +43,31 @@ upgrade by updating the flake input.
 | `services.nouride.port` | `18254` | Dashboard / API port. |
 | `services.nouride.routerPort` | `18256` | Nougate gateway port (Router edition; set `[nougate] port` to match). |
 | `services.nouride.openFirewall` | `false` | Open the dashboard port, plus the Nougate port for the Router edition. |
-| `services.nouride.stateDir` | `/var/lib/nouride` | Working directory and `HOME`: `config.toml` and `.nouride/`. |
-| `services.nouride.user` / `group` | `nouride` | Service account, created when left at the default. |
+| `services.nouride.user` | `"nouride"` | User the daemon runs as. See [Running as your own user](#running-as-your-own-user). |
+| `services.nouride.group` | `nouride`, or that user's group | Group the daemon runs as. |
+| `services.nouride.stateDir` | `/var/lib/nouride`, or that user's home | Working directory and `HOME`: `config.toml` and `.nouride/`. |
 | `services.nouride.environment` | `{ }` | Extra environment variables. |
 | `services.nouride.environmentFile` | `null` | `KEY=value` secrets file kept out of the store. |
 | `services.nouride.extraPackages` | bash, coreutils, findutils, gnugrep, gnused, curl, git | Commands available to agents on the daemon's `PATH`. |
+
+## Running as your own user
+
+By default the daemon runs as an isolated `nouride` system user, with its state
+in `/var/lib/nouride`. Agents run commands on the host, so this keeps them away
+from your files. The `nouride` CLI finds its daemon through the directory it
+runs from, so manage it with
+`sudo -u nouride sh -c 'cd /var/lib/nouride && nouride status'`.
+
+To run it as an existing account instead, set that account in the host's
+config:
+
+```nix
+services.nouride.user = "alice";
+```
+
+The daemon then runs as `alice`, with its state in `~alice/.nouride`, and
+`nouride status` works for `alice` from `~`. Agents get that user's access to
+the machine.
 
 ## Updates
 

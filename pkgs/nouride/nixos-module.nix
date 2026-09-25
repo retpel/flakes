@@ -11,6 +11,9 @@ self:
 let
   cfg = config.services.nouride;
   isRouter = (cfg.package.passthru.edition or "standard") == "router";
+  # Left at the default, the daemon gets its own isolated system user. Set to an
+  # existing account, it runs as that user out of their home instead.
+  dedicatedUser = cfg.user == "nouride";
 in
 {
   options.services.nouride = {
@@ -47,25 +50,34 @@ in
       description = "Open the dashboard port (and the Nougate port for the Router edition).";
     };
 
-    stateDir = lib.mkOption {
-      type = lib.types.path;
-      default = "/var/lib/nouride";
-      description = ''
-        Working directory and HOME of the daemon. It holds `config.toml` (optional) and
-        `.nouride/` — the database, secrets and agent packs.
-      '';
-    };
-
     user = lib.mkOption {
       type = lib.types.str;
       default = "nouride";
-      description = "User the daemon runs as (created when left at the default).";
+      example = "alice";
+      description = ''
+        User the daemon runs as. The default creates an isolated `nouride` system user.
+        Set it to an existing account to run the daemon as that user, with its state in
+        their home, so `nouride status` etc. work for them from `~`. Agents then have that
+        user's access to the machine.
+      '';
     };
 
     group = lib.mkOption {
       type = lib.types.str;
-      default = "nouride";
-      description = "Group the daemon runs as (created when left at the default).";
+      default = if dedicatedUser then "nouride" else config.users.users.${cfg.user}.group;
+      defaultText = lib.literalExpression ''if user == "nouride" then "nouride" else config.users.users.''${user}.group'';
+      description = "Group the daemon runs as (created when left at `nouride`).";
+    };
+
+    stateDir = lib.mkOption {
+      type = lib.types.path;
+      default = if dedicatedUser then "/var/lib/nouride" else config.users.users.${cfg.user}.home;
+      defaultText = lib.literalExpression ''if user == "nouride" then "/var/lib/nouride" else config.users.users.''${user}.home'';
+      description = ''
+        Working directory and HOME of the daemon. It holds `config.toml` (optional) and
+        `.nouride/` — the database, secrets and agent packs. The `nouride` CLI finds the
+        daemon through the directory it runs from, so run it from here.
+      '';
     };
 
     environment = lib.mkOption {
@@ -102,7 +114,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    users.users = lib.mkIf (cfg.user == "nouride") {
+    users.users = lib.mkIf dedicatedUser {
       nouride = {
         isSystemUser = true;
         group = cfg.group;
@@ -117,9 +129,12 @@ in
       [ cfg.port ] ++ lib.optional isRouter cfg.routerPort
     );
 
-    systemd.tmpfiles.settings.nouride.${cfg.stateDir}.d = {
-      inherit (cfg) user group;
-      mode = "0750";
+    # Only for the dedicated user; an existing user's home is already set up.
+    systemd.tmpfiles.settings.nouride = lib.mkIf dedicatedUser {
+      ${cfg.stateDir}.d = {
+        inherit (cfg) user group;
+        mode = "0750";
+      };
     };
 
     systemd.services.nouride = {
@@ -157,7 +172,8 @@ in
         NoNewPrivileges = true;
         PrivateTmp = true;
         ProtectSystem = "full";
-        ProtectHome = true;
+        # A regular user's state lives in their home, so /home stays visible then.
+        ProtectHome = dedicatedUser;
       };
     };
   };
