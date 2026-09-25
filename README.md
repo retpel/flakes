@@ -57,6 +57,6 @@ single package.
 ## License
 
 Each packaged program keeps its own license, set by its authors and listed in
-its `meta.license` (for example, Rayfish is MPL-2.0). All product names, logos
-and trademarks belong to their respective owners and creators. This repository
-is not affiliated with or endorsed by them.
+its `meta.license`. All product names, logos and trademarks belong to their
+respective owners and creators. This repository is not affiliated with or
+endorsed by them.
