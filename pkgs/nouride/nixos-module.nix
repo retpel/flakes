@@ -129,12 +129,16 @@ in
       [ cfg.port ] ++ lib.optional isRouter cfg.routerPort
     );
 
-    # Only for the dedicated user; an existing user's home is already set up.
-    systemd.tmpfiles.settings.nouride = lib.mkIf dedicatedUser {
-      ${cfg.stateDir}.d = {
+    systemd.tmpfiles.settings.nouride = {
+      # Only for the dedicated user; an existing user's home is already set up.
+      ${cfg.stateDir}.d = lib.mkIf dedicatedUser {
         inherit (cfg) user group;
         mode = "0750";
       };
+      # The daemon takes the directory above .nouride/ as its install directory and
+      # only offers agents the `nouride` tool when the binary sits there, as in
+      # upstream's layout. `exec nouride ...` is refused in favour of that tool.
+      "${cfg.stateDir}/nouride"."L+".argument = "${cfg.package}/libexec/nouride/nouride";
     };
 
     systemd.services.nouride = {
