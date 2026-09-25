@@ -1,4 +1,4 @@
-# flakes
+# Flakes
 
 Nix packages by `Prompter`.
 
