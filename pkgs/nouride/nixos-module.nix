@@ -145,7 +145,7 @@ in
         User = cfg.user;
         Group = cfg.group;
         WorkingDirectory = cfg.stateDir;
-        ExecStart = "${lib.getExe cfg.package} run";
+        ExecStart = "${lib.getExe cfg.package} start";
         EnvironmentFile = lib.mkIf (cfg.environmentFile != null) cfg.environmentFile;
         Restart = "always";
         RestartSec = 5;
