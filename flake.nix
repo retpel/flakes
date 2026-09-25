@@ -13,14 +13,16 @@
         "x86_64-linux"
       ];
       eachSystem = lib.genAttrs systems;
-      pkgsFor = eachSystem (system: import nixpkgs { inherit system; });
 
       # Every directory under pkgs/ is a package: pkgs/<name>/package.nix.
       pkgDirs = lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./pkgs);
       packageNames = builtins.attrNames pkgDirs;
 
-      # Packages that also ship a service module: pkgs/<name>/module.nix.
-      moduleNames = builtins.filter (name: builtins.pathExists ./pkgs/${name}/module.nix) packageNames;
+      # Some packages here are unfree upstream binaries; allow only our own.
+      pkgsFor = eachSystem (system: import nixpkgs {
+        inherit system;
+        config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) packageNames;
+      });
 
       # All packages built against `pkgs`, in one scope so they can depend on
       # each other by argument name.
@@ -36,15 +38,20 @@
       available = system: pkg:
         lib.meta.availableOn pkgsFor.${system}.stdenv.hostPlatform pkg && !(pkg.meta.broken or false);
 
-      modules = lib.genAttrs moduleNames (name: import ./pkgs/${name}/module.nix self);
+      # Service modules, by file name in pkgs/<name>/: module.nix is exported for
+      # both nix-darwin and NixOS, darwin-module.nix / nixos-module.nix for one.
+      modulesFrom = file:
+        lib.genAttrs (builtins.filter (name: builtins.pathExists ./pkgs/${name}/${file}) packageNames) (
+          name: import ./pkgs/${name}/${file} self
+        );
     in
     {
       packages = eachSystem (system: lib.filterAttrs (_: available system) (mkPackagesFor pkgsFor.${system}));
 
       overlays.default = import ./overlays { inherit mkPackagesFor; };
 
-      darwinModules = modules;
-      nixosModules = modules;
+      darwinModules = modulesFrom "module.nix" // modulesFrom "darwin-module.nix";
+      nixosModules = modulesFrom "module.nix" // modulesFrom "nixos-module.nix";
 
       checks = self.packages;
 

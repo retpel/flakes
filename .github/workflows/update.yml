@@ -34,7 +34,9 @@ jobs:
             "$script"
             git diff --quiet -- "pkgs/$name" && continue
             version="$(jq -r .version "pkgs/$name/hashes.json" 2>/dev/null || echo new)"
-            if nix build -L ".#packages.x86_64-linux.$name" && nix flake check --all-systems --no-build; then
+            # Build every x86_64-linux package, so packages built on this one
+            # (e.g. nouride-router on nouride) are checked too.
+            if nix flake check --all-systems --no-build && nix flake check -L; then
               git commit -m "Update $name to v$version" -- "pkgs/$name"
             else
               echo "::error::$name failed to build after update"

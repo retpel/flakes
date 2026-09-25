@@ -14,6 +14,8 @@ Nix packages by `Prompter`.
 
 | Package | Description |
 |---|---|
+| [nouride](pkgs/nouride) | Multi-agent AI daemon, with a NixOS service module. Linux only, unfree |
+| [nouride-router](pkgs/nouride) | Nouride with the in-process Nougate AI Router. Linux only, unfree |
 | [rayfish](pkgs/rayfish) | P2P mesh VPN (iroh), with a nix-darwin/NixOS service module |
 
 ## Usage
@@ -35,13 +37,18 @@ Nix packages by `Prompter`.
 }
 ```
 
+Unfree packages (nouride) build as-is from `packages`. Through the overlay,
+your own nixpkgs config must allow them, e.g.
+`nixpkgs.config.allowUnfreePredicate = p: builtins.elem (lib.getName p) [ "nouride" "nouride-router" ];`.
+
 Or run one without installing: `nix run github:retpel/flakes#rayfish -- --version`.
 
 ## Outputs
 
 - `packages.<system>.<name>`: only packages that build on `<system>`
 - `overlays.default`: adds `pkgs.retpel.<name>`
-- `darwinModules.<name>`, `nixosModules.<name>`: for packages that have a `module.nix`
+- `darwinModules.<name>`, `nixosModules.<name>`: for packages that have a
+  `module.nix` (both), `darwin-module.nix` or `nixos-module.nix` (one only)
 - `checks.<system>.<name>`: builds every package
 - `formatter`: `nixfmt-rfc-style`
 
@@ -50,7 +57,7 @@ Systems: `aarch64-darwin`, `aarch64-linux`, `x86_64-linux`.
 ## Updates
 
 `.github/workflows/update.yml` runs daily. For each `pkgs/<name>/update.sh`, it
-runs the script. If files changed, it builds the package and commits
+runs the script. If files changed, it builds every Linux package and commits
 `Update <name> to vX.Y.Z` to `main`. Run it from the Actions tab to update a
 single package.
 
