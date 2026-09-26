@@ -46,9 +46,10 @@ upgrade by updating the flake input.
 | `services.nouride.user` | `"nouride"` | User the daemon runs as. See [Running as your own user](#running-as-your-own-user). |
 | `services.nouride.group` | `nouride`, or that user's group | Group the daemon runs as. |
 | `services.nouride.stateDir` | `/var/lib/nouride`, or that user's home | Working directory and `HOME`: `config.toml` and `.nouride/`. |
-| `services.nouride.environment` | `{ }` | Extra environment variables. |
+| `services.nouride.environment` | `{ }` | Extra environment variables (`TZ` defaults to `time.timeZone`). |
 | `services.nouride.environmentFile` | `null` | `KEY=value` secrets file kept out of the store. |
-| `services.nouride.extraPackages` | bash, coreutils, findutils, gnugrep, gnused, curl, git | Commands available to agents on the daemon's `PATH`. |
+| `services.nouride.extraPackages` | bash, coreutils, findutils, gnugrep, gnused, gawk, procps, util-linux, iproute2, which, curl, git | Commands available to agents on the daemon's `PATH` (systemd's `systemctl`/`journalctl` come with every NixOS service). |
+| `services.nouride.privileged` | `false` | Drop the systemd sandbox so agents can manage the host. See [What agents can do on the host](#what-agents-can-do-on-the-host). |
 
 ## Running as your own user
 
@@ -68,6 +69,32 @@ services.nouride.user = "alice";
 The daemon then runs as `alice`, with its state in `~alice/.nouride`, and
 `nouride status` works for `alice` from `~`. Agents get that user's access to
 the machine.
+
+## What agents can do on the host
+
+Agents run commands through `exec` (and the interactive `session` tool, which
+needs `script` from util-linux), limited to what is on the service's `PATH`
+and to what the sandbox allows.
+
+**Commands.** `extraPackages` covers inspecting the host (`ps`, `free`,
+`uptime`, `ip`, `ss`, `lsblk`, `systemctl`, `journalctl`). Some built-in skills
+need more; `nouride doctor` names what is missing:
+
+```nix
+services.nouride.extraPackages = options.services.nouride.extraPackages.default ++ (with pkgs; [
+  poppler-utils pandoc python3   # document-reading (plus libreoffice for Office files)
+  tectonic                       # document-authoring
+]);
+```
+
+**Sandbox.** By default the unit carries the hardening of upstream's generated
+unit: the system is read-only, the home is read-only except `stateDir`, and
+`sudo` cannot gain privileges. That is enough to report on the host, but not to
+change it. `services.nouride.privileged = true` drops the sandbox, like
+`nouride service install --privileged`, and puts `sudo` on `PATH`. The agent
+then manages the host as far as the user's sudo rules allow, gated only by
+nouride's exec policy (`nouride policy`). Use it only on a machine dedicated to
+the daemon.
 
 ## Updates
 

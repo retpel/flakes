@@ -99,17 +99,43 @@ in
 
     extraPackages = lib.mkOption {
       type = with lib.types; listOf package;
+      # Enough to inspect the host (ps, free, uptime, ip, ss, lsblk, ...); NixOS adds systemd
+      # (systemctl, journalctl) to every service's PATH itself.
       default = with pkgs; [
         bash
         coreutils
         findutils
         gnugrep
         gnused
+        gawk
+        procps
+        util-linux
+        iproute2
+        which
         curl
         git
       ];
-      defaultText = lib.literalExpression "with pkgs; [ bash coreutils findutils gnugrep gnused curl git ]";
-      description = "Packages on the daemon's PATH, i.e. the commands agents can execute.";
+      defaultText = lib.literalExpression "with pkgs; [ bash coreutils findutils gnugrep gnused gawk procps util-linux iproute2 which curl git ]";
+      description = ''
+        Packages on the daemon's PATH, i.e. the commands agents can execute. Setting this
+        replaces the default list, so extend it with `options.services.nouride.extraPackages.default ++ [ ... ]`
+        or list everything needed.
+
+        Some built-in skills need more: `document-reading` wants poppler-utils (pdftotext),
+        pandoc, libreoffice and python3; `document-authoring` wants tectonic and pandoc.
+        `nouride doctor` lists what is missing.
+      '';
+    };
+
+    privileged = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Drop the systemd sandbox, as `nouride service install --privileged` does, so agents
+        can manage this host: `sudo` (subject to the host's sudo rules), writing outside the
+        state directory, containers. Commands are then gated only by nouride's exec policy.
+        Meant for a machine dedicated to the daemon.
+      '';
     };
   };
 
@@ -147,7 +173,8 @@ in
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       # The nouride CLI too, so agents can reach it through `exec` (and the `nouride` tool).
-      path = [ cfg.package ] ++ cfg.extraPackages;
+      # Privileged, /run/wrappers too: that is where NixOS keeps sudo.
+      path = [ cfg.package ] ++ cfg.extraPackages ++ lib.optional cfg.privileged "/run/wrappers";
 
       environment = {
         HOME = cfg.stateDir;
@@ -155,6 +182,8 @@ in
         PORT = toString cfg.port;
         NOURIDE_SERVICE_KIND = "systemd";
       }
+      # The agents' sense of time and cron default to UTC otherwise.
+      // lib.optionalAttrs (config.time.timeZone != null) { TZ = config.time.timeZone; }
       // cfg.environment;
 
       startLimitBurst = 5;
@@ -173,12 +202,22 @@ in
         TimeoutStopSec = 45;
         KillSignal = "SIGTERM";
         UMask = "0027";
-
+      }
+      # The hardening upstream's generated unit carries; --privileged drops all of it.
+      // lib.optionalAttrs (!cfg.privileged) {
         NoNewPrivileges = true;
         PrivateTmp = true;
-        ProtectSystem = "full";
+        ProtectSystem = "strict";
         # A regular user's state lives in their home, so /home stays visible then.
-        ProtectHome = dedicatedUser;
+        ProtectHome = if dedicatedUser then true else "read-only";
+        # The one path it must write: .nouride/ and the agents' workspace live here.
+        ReadWritePaths = [ cfg.stateDir ];
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectControlGroups = true;
+        RestrictSUIDSGID = true;
+        RestrictNamespaces = true;
+        LockPersonality = true;
       };
     };
   };
