@@ -99,31 +99,16 @@ in
 
     extraPackages = lib.mkOption {
       type = with lib.types; listOf package;
-      # Enough to inspect the host (ps, free, uptime, ip, ss, lsblk, ...); NixOS adds systemd
-      # (systemctl, journalctl) to every service's PATH itself.
-      default = with pkgs; [
-        bash
-        coreutils
-        findutils
-        gnugrep
-        gnused
-        gawk
-        procps
-        util-linux
-        iproute2
-        which
-        curl
-        git
-      ];
-      defaultText = lib.literalExpression "with pkgs; [ bash coreutils findutils gnugrep gnused gawk procps util-linux iproute2 which curl git ]";
+      default = [ ];
+      example = lib.literalExpression "with pkgs; [ poppler-utils pandoc python3 tectonic ]";
       description = ''
-        Packages on the daemon's PATH, i.e. the commands agents can execute. Setting this
-        replaces the default list, so extend it with `options.services.nouride.extraPackages.default ++ [ ... ]`
-        or list everything needed.
+        Packages for the daemon's PATH only, ahead of the host's. The daemon already sees
+        everything installed on the system (and, running as an existing user, that user's
+        profiles), like on any other distro; nouride's exec policy decides what agents may run.
 
-        Some built-in skills need more: `document-reading` wants poppler-utils (pdftotext),
-        pandoc, libreoffice and python3; `document-authoring` wants tectonic and pandoc.
-        `nouride doctor` lists what is missing.
+        Some built-in skills need more than a base system: `document-reading` wants
+        poppler-utils (pdftotext), pandoc, libreoffice and python3; `document-authoring`
+        wants tectonic and pandoc. `nouride doctor` lists what is missing.
       '';
     };
 
@@ -172,9 +157,20 @@ in
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
-      # The nouride CLI too, so agents can reach it through `exec` (and the `nouride` tool).
-      # Privileged, /run/wrappers too: that is where NixOS keeps sudo.
-      path = [ cfg.package ] ++ cfg.extraPackages ++ lib.optional cfg.privileged "/run/wrappers";
+      # A login shell's PATH, so agents can run what is installed on the host, as they would
+      # from /usr/bin elsewhere; what they may run is nouride's exec policy. The nouride CLI
+      # comes first, so agents reach it through `exec` (and the `nouride` tool). sudo sits in
+      # /run/wrappers, but only works when privileged lifts NoNewPrivileges.
+      path =
+        [ cfg.package ]
+        ++ cfg.extraPackages
+        ++ [ "/run/wrappers" ]
+        ++ lib.optional (!dedicatedUser) "${config.users.users.${cfg.user}.home}/.nix-profile"
+        ++ [
+          "/etc/profiles/per-user/${cfg.user}"
+          "/nix/var/nix/profiles/default"
+          "/run/current-system/sw"
+        ];
 
       environment = {
         HOME = cfg.stateDir;

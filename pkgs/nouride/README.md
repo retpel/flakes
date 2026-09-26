@@ -48,7 +48,7 @@ upgrade by updating the flake input.
 | `services.nouride.stateDir` | `/var/lib/nouride`, or that user's home | Working directory and `HOME`: `config.toml` and `.nouride/`. |
 | `services.nouride.environment` | `{ }` | Extra environment variables (`TZ` defaults to `time.timeZone`). |
 | `services.nouride.environmentFile` | `null` | `KEY=value` secrets file kept out of the store. |
-| `services.nouride.extraPackages` | bash, coreutils, findutils, gnugrep, gnused, gawk, procps, util-linux, iproute2, which, curl, git | Commands available to agents on the daemon's `PATH` (systemd's `systemctl`/`journalctl` come with every NixOS service). |
+| `services.nouride.extraPackages` | `[ ]` | Packages for the daemon's `PATH` only, on top of what the host has installed. |
 | `services.nouride.privileged` | `false` | Drop the systemd sandbox so agents can manage the host. See [What agents can do on the host](#what-agents-can-do-on-the-host). |
 
 ## Running as your own user
@@ -72,26 +72,30 @@ the machine.
 
 ## What agents can do on the host
 
-Agents run commands through `exec` (and the interactive `session` tool, which
-needs `script` from util-linux), limited to what is on the service's `PATH`
-and to what the sandbox allows.
+Agents run commands through `exec` and the interactive `session` tool. As on
+any other distro, the daemon sees what is installed on the host: its `PATH` is
+a login shell's (`/run/wrappers`, the user's profiles, `/run/current-system/sw`).
+What agents may actually run is nouride's own exec policy: the agent's
+Approvals setting and `[security.exec]` (`nouride policy`), not this module.
 
-**Commands.** `extraPackages` covers inspecting the host (`ps`, `free`,
-`uptime`, `ip`, `ss`, `lsblk`, `systemctl`, `journalctl`). Some built-in skills
-need more; `nouride doctor` names what is missing:
+**Commands.** Install tools on the host as usual (`environment.systemPackages`,
+`users.users.<name>.packages`, home-manager). New ones are visible without
+restarting the daemon. `extraPackages` is for tools only the daemon should see.
+Some built-in skills need software a base system lacks; `nouride doctor` names
+it:
 
 ```nix
-services.nouride.extraPackages = options.services.nouride.extraPackages.default ++ (with pkgs; [
+services.nouride.extraPackages = with pkgs; [
   poppler-utils pandoc python3   # document-reading (plus libreoffice for Office files)
   tectonic                       # document-authoring
-]);
+];
 ```
 
 **Sandbox.** By default the unit carries the hardening of upstream's generated
 unit: the system is read-only, the home is read-only except `stateDir`, and
 `sudo` cannot gain privileges. That is enough to report on the host, but not to
 change it. `services.nouride.privileged = true` drops the sandbox, like
-`nouride service install --privileged`, and puts `sudo` on `PATH`. The agent
+`nouride service install --privileged`, so `sudo` works. The agent
 then manages the host as far as the user's sudo rules allow, gated only by
 nouride's exec policy (`nouride policy`). Use it only on a machine dedicated to
 the daemon.
