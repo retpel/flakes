@@ -49,6 +49,7 @@ upgrade by updating the flake input.
 | `services.nouride.environment` | `{ }` | Extra environment variables (`TZ` defaults to `time.timeZone`). |
 | `services.nouride.environmentFile` | `null` | `KEY=value` secrets file kept out of the store. |
 | `services.nouride.extraPackages` | `[ ]` | Packages for the daemon's `PATH` only, on top of what the host has installed. |
+| `services.nouride.memoryHigh` | `"80%"` | Soft memory ceiling for the daemon and what agents run, as upstream's unit sets. Use an absolute size inside an LXC; `null` unsets it. |
 | `services.nouride.privileged` | `false` | Drop the systemd sandbox so agents can manage the host. See [What agents can do on the host](#what-agents-can-do-on-the-host). |
 
 ## Running as your own user

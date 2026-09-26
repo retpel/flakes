@@ -112,6 +112,18 @@ in
       '';
     };
 
+    memoryHigh = lib.mkOption {
+      type = with lib.types; nullOr str;
+      default = "80%";
+      example = "2G";
+      description = ''
+        Soft memory ceiling (systemd `MemoryHigh=`) for the daemon and every command its agents
+        spawn: past it they are throttled, never killed. Upstream's unit sets 80% of the machine.
+        Inside an LXC a percentage resolves against the host's memory, so give an absolute size
+        there. `null` leaves it unset.
+      '';
+    };
+
     privileged = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -198,6 +210,7 @@ in
         TimeoutStopSec = 45;
         KillSignal = "SIGTERM";
         UMask = "0027";
+        MemoryHigh = lib.mkIf (cfg.memoryHigh != null) cfg.memoryHigh;
       }
       # The hardening upstream's generated unit carries; --privileged drops all of it.
       // lib.optionalAttrs (!cfg.privileged) {
