@@ -164,8 +164,17 @@ in
       "${cfg.stateDir}/nouride"."L+".argument = "${cfg.package}/libexec/nouride/nouride";
     };
 
+    # Like `nouride service install`: every other boundary assumes an unprivileged account.
+    assertions = [
+      {
+        assertion = cfg.user != "root";
+        message = "services.nouride.user must not be root; nouride runs commands chosen by a model.";
+      }
+    ];
+
     systemd.services.nouride = {
       description = "Nouride multi-agent AI daemon";
+      documentation = [ "https://nouride.com/en/docs/deployment/production/" ];
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
@@ -209,16 +218,19 @@ in
         # In-flight turns are saved on SIGTERM; matches [daemon] shutdown_timeout_ms with headroom.
         TimeoutStopSec = 45;
         KillSignal = "SIGTERM";
-        UMask = "0027";
         MemoryHigh = lib.mkIf (cfg.memoryHigh != null) cfg.memoryHigh;
+        SyslogIdentifier = "nouride";
       }
       # The hardening upstream's generated unit carries; --privileged drops all of it.
       // lib.optionalAttrs (!cfg.privileged) {
         NoNewPrivileges = true;
-        PrivateTmp = true;
+        # Private and bounded: a tmpfs is RAM, so a large clone into /tmp cannot eat it all.
+        TemporaryFileSystem = [
+          "/tmp:size=1073741824,mode=1777"
+          "/var/tmp:size=268435456,mode=1777"
+        ];
         ProtectSystem = "strict";
-        # A regular user's state lives in their home, so /home stays visible then.
-        ProtectHome = if dedicatedUser then true else "read-only";
+        ProtectHome = "read-only";
         # The one path it must write: .nouride/ and the agents' workspace live here.
         ReadWritePaths = [ cfg.stateDir ];
         ProtectKernelTunables = true;
