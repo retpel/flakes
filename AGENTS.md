@@ -31,6 +31,9 @@ patchelf; keep `dontFixup`. `nullclaw-nightly` is `nullclaw.override { nightly =
 with its own `pkgs/nullclaw-nightly/hashes.json`. Upstream's `nightly` release is
 rebuilt in place under the same asset names, so its pinned hashes go stale each
 day until `update.sh` runs; its `update.sh` exits 0 when the assets are mid-upload.
+`module.nix` (both platforms, like rayfish) runs `nullclaw gateway` as `user` with
+`NULLCLAW_HOME`, mirroring upstream's `service install` unit but always pointing at
+`cfg.package`. Keep `enable` off by default and `user` required.
 
 **rayfish**: see `pkgs/rayfish/README.md`. Services run `libexec/rayfish/ray`
 directly, never the guarded `bin/ray`; don't loosen `ray-guard.sh`. Detect

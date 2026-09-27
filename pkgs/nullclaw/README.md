@@ -54,15 +54,55 @@ hash mismatch. A binary already in your Nix store keeps working. So run
 `nix flake update retpel` before rebuilding, and use `nullclaw` if you need
 builds of an older lock to keep working.
 
-## Updating and services
+## Service
+
+`services.nullclaw` runs the gateway at boot, as `user`, restarting it when it
+exits: the same as upstream's `nullclaw service install` (`nullclaw gateway`,
+`NULLCLAW_HOME`, optional `.env`), but always the installed package. One
+`module.nix` covers NixOS (systemd) and nix-darwin (launchd), exported as
+`nixosModules.nullclaw` and `darwinModules.nullclaw`.
+
+```nix
+{
+  imports = [ inputs.retpel.nixosModules.nullclaw ];  # or darwinModules.nullclaw
+
+  services.nullclaw = {
+    enable = true;
+    user = "alice";
+    # package = inputs.retpel.packages.${system}.nullclaw-nightly;
+  };
+}
+```
+
+The gateway runs an autonomous agent that can execute commands as `user`,
+reachable from every configured channel. Review `autonomy` and each channel's
+`allow_from` in `config.json` before enabling it.
+
+| Option | Default | Description |
+|---|---|---|
+| `services.nullclaw.enable` | `false` | Run the gateway and put `nullclaw` on `PATH`. |
+| `services.nullclaw.package` | `nullclaw` | Package to run; `nullclaw-nightly` works too. |
+| `services.nullclaw.user` | (required) | User it runs as; must be declared in `users.users`. |
+| `services.nullclaw.stateDir` | `<home>/.nullclaw` | `NULLCLAW_HOME`: `config.json`, `auth.json`, workspace. |
+| `services.nullclaw.environmentFile` | `<stateDir>/.env` | `KEY=value` file for the gateway (e.g. API keys); skipped if missing. `null` disables it. |
+
+Run `nullclaw onboard` as `user` first, so `stateDir` exists. After editing
+`config.json`, restart the service: `nullclaw config reload` only validates.
+
+- **NixOS:** systemd unit `nullclaw.service` (`Restart=always`), logs in the
+  journal: `journalctl -u nullclaw`. Restart with `sudo systemctl restart nullclaw`.
+- **macOS:** launchd daemon `com.nullclaw.gateway` running as `user`
+  (`KeepAlive`), logging to `<stateDir>/gateway.log`. It waits for the Nix store
+  at boot. Restart with `sudo launchctl kickstart -k system/com.nullclaw.gateway`.
+
+## Updating
 
 - `nullclaw update` detects the Nix store path and only prints instructions
   (for nixpkgs, not this flake). Upgrade with `nix flake update retpel`.
-- `nullclaw service install` writes a user service (systemd on Linux, a
-  LaunchAgent on macOS) that points at the current `/nix/store` path. After an
-  upgrade it keeps running the old version until you run
-  `nullclaw service install` again, and it breaks once that path is
-  garbage-collected. This flake has no service module for it.
+- Don't use `nullclaw service install`: it writes a user service pointing at
+  the current `/nix/store` path, which keeps running the old version after an
+  upgrade and breaks once that path is garbage-collected. Use
+  `services.nullclaw` instead.
 
 ## Updates
 
@@ -80,3 +120,4 @@ Consumers pick it up with `nix flake update retpel`.
 
 - `packages.<system>.nullclaw`, `packages.<system>.nullclaw-nightly`
 - `pkgs.retpel.nullclaw`, `pkgs.retpel.nullclaw-nightly` through `overlays.default`
+- `nixosModules.nullclaw`, `darwinModules.nullclaw`: the `services.nullclaw` module
