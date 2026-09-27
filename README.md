@@ -16,6 +16,7 @@ Nix packages by `Prompter`.
 |---|---|
 | [nouride](pkgs/nouride) | Multi-agent AI daemon, with a NixOS service module. Linux only, unfree |
 | [nouride-router](pkgs/nouride) | Nouride with the in-process Nougate AI Router. Linux only, unfree |
+| [nullclaw](pkgs/nullclaw) | Small, fully autonomous AI assistant in one static Zig binary |
 | [rayfish](pkgs/rayfish) | P2P mesh VPN (iroh), with a nix-darwin/NixOS service module |
 
 ## Usage
