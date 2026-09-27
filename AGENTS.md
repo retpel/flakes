@@ -32,6 +32,12 @@ doc; keep it and each package's README in sync with behavior. Remote:
 Keep `dontStrip` (bun-compiled binary) and the `libexec/nouride` layout, since the
 daemon finds `dashboard/`, `skills/` next to its real executable.
 
+**nullclaw / nullclaw-nightly**: static prebuilt binaries (musl on Linux), so no
+patchelf; keep `dontFixup`. `nullclaw-nightly` is `nullclaw.override { nightly = true; }`
+with its own `pkgs/nullclaw-nightly/hashes.json`. Upstream's `nightly` release is
+rebuilt in place under the same asset names, so its pinned hashes go stale each
+day until `update.sh` runs; its `update.sh` exits 0 when the assets are mid-upload.
+
 **rayfish**: see `pkgs/rayfish/README.md`. Services run `libexec/rayfish/ray`
 directly, never the guarded `bin/ray`; don't loosen `ray-guard.sh`. Detect
 nix-darwin in `module.nix` with `options ? launchd`, not `pkgs.stdenv`
