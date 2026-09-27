@@ -14,8 +14,6 @@ Nix packages by `Prompter`.
 
 | Package | Description |
 |---|---|
-| [nouride](pkgs/nouride) | Multi-agent AI daemon, with a NixOS service module. Linux only, unfree |
-| [nouride-router](pkgs/nouride) | Nouride with the in-process Nougate AI Router. Linux only, unfree |
 | [nullclaw](pkgs/nullclaw) | Small, fully autonomous AI assistant in one static Zig binary |
 | [nullclaw-nightly](pkgs/nullclaw) | NullClaw's rolling nightly build, bumped daily |
 | [rayfish](pkgs/rayfish) | P2P mesh VPN (iroh), with a nix-darwin/NixOS service module |
@@ -38,10 +36,6 @@ Nix packages by `Prompter`.
   modules = [ inputs.retpel.darwinModules.rayfish ];  # or nixosModules
 }
 ```
-
-Unfree packages (nouride) build as-is from `packages`. Through the overlay,
-your own nixpkgs config must allow them, e.g.
-`nixpkgs.config.allowUnfreePredicate = p: builtins.elem (lib.getName p) [ "nouride" "nouride-router" ];`.
 
 Or run one without installing: `nix run github:retpel/flakes#rayfish -- --version`.
 

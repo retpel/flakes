@@ -18,11 +18,7 @@
       pkgDirs = lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./pkgs);
       packageNames = builtins.attrNames pkgDirs;
 
-      # Some packages here are unfree upstream binaries; allow only our own.
-      pkgsFor = eachSystem (system: import nixpkgs {
-        inherit system;
-        config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) packageNames;
-      });
+      pkgsFor = eachSystem (system: nixpkgs.legacyPackages.${system});
 
       # All packages built against `pkgs`, in one scope so they can depend on
       # each other by argument name.
