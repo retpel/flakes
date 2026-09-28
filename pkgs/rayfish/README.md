@@ -51,6 +51,7 @@ detects nix-darwin from the `launchd` option.
 | `services.rayfish.package` | this flake's package | both | Rayfish package to run. No overlay needed. |
 | `services.rayfish.resolver.enable` | `true` | macOS | Write `/etc/resolver/ray` so `.ray` names resolve through Rayfish's DNS (`200::53`) instead of another VPN's local resolver. |
 | `services.rayfish.rayFix.enable` | `true` | macOS | Install `sudo ray-fix`, which points the Rayfish DNS and active peer routes back at the Rayfish utun after Rayfish or another VPN (e.g. WARP) replaces a utun interface or address. |
+| `services.rayfish.logFilter` | `null` | both | `RUST_LOG` for the daemon, e.g. `"info,iroh::net_report=error"` to drop the "IPv4 address detected by QAD varies by destination" warnings behind hard NAT. Replaces Rayfish's own filters, so its daily file log loses `rayfish=debug` detail. |
 
 ## Service
 

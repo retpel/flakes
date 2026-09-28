@@ -75,6 +75,19 @@ in {
         replaces a utun interface or address. macOS only.
       '';
     };
+    logFilter = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      example = "info,iroh::net_report=error";
+      description = ''
+        `RUST_LOG` for the daemon. Rayfish's defaults are `info` for its main
+        output (journal / /var/log/rayfish.log) and `info,rayfish=debug` for its
+        daily file log; `RUST_LOG` replaces both. The example drops iroh's
+        network-report warnings (e.g. "IPv4 address detected by QAD varies by
+        destination" behind hard NAT) at the cost of Rayfish's debug detail in
+        the file log. `null` keeps Rayfish's defaults.
+      '';
+    };
   };
 
   config = mkIf cfg.enable (mkMerge [
@@ -114,6 +127,9 @@ in {
           ThrottleInterval = 10;
           StandardOutPath = "/var/log/rayfish.log";
           StandardErrorPath = "/var/log/rayfish.log";
+        }
+        // optionalAttrs (cfg.logFilter != null) {
+          EnvironmentVariables.RUST_LOG = cfg.logFilter;
         };
       };
     })
@@ -130,6 +146,7 @@ in {
           RestartSec = 5;
           User = "root";
         };
+        environment = optionalAttrs (cfg.logFilter != null) { RUST_LOG = cfg.logFilter; };
       };
     })
   ]);
