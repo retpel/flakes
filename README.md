@@ -16,6 +16,7 @@ Nix packages by `Prompter`.
 |---|---|
 | [nullclaw](pkgs/nullclaw) | Small, fully autonomous AI assistant in one static Zig binary, with a nix-darwin/NixOS service module |
 | [nullclaw-nightly](pkgs/nullclaw) | NullClaw's rolling nightly build, bumped daily |
+| [nullclaw-chat-ui](pkgs/nullclaw-chat-ui) | NullClaw's web chat UI as static files, to serve from any web server |
 | [rayfish](pkgs/rayfish) | P2P mesh VPN (iroh), with a nix-darwin/NixOS service module |
 
 ## Usage

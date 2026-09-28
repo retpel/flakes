@@ -43,6 +43,10 @@ it); recheck it when bumping nullclaw.
 `PrivateNetwork`, `ProtectProc=invisible`, `PrivateDevices`) so a monitoring
 agent still sees the host. Recheck #882 (Landlock) when bumping nullclaw.
 
+**nullclaw-chat-ui**: static files only (`share/nullclaw-chat-ui`) unpacked from the
+upstream release archive's `build/`; never add a Node build. Upstream declares no
+license, so `meta.license` stays unset.
+
 **rayfish**: see `pkgs/rayfish/README.md`. Services run `libexec/rayfish/ray`
 directly, never the guarded `bin/ray`; don't loosen `ray-guard.sh`. Detect
 nix-darwin in `module.nix` with `options ? launchd`, not `pkgs.stdenv`
