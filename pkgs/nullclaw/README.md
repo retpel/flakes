@@ -87,6 +87,8 @@ reachable from every configured channel. Review `autonomy` and each channel's
 | `services.nullclaw.environmentFile` | `<stateDir>/.env` | `KEY=value` file for the gateway (e.g. API keys); skipped if missing. `null` disables it. |
 | `services.nullclaw.watchdog.enable` | `false` | Restart the gateway when a polling channel gets stuck (see below). NixOS only. |
 | `services.nullclaw.watchdog.interval` | `"5min"` | How often the watchdog checks. |
+| `services.nullclaw.hardening.enable` | `false` | Filesystem read-only except `stateDir`, no privilege gain (see below). NixOS only. |
+| `services.nullclaw.hardening.readWritePaths` | `[ ]` | Extra writable paths besides `stateDir`. |
 
 Run `nullclaw onboard` as `user` first, so `stateDir` exists. After editing
 `config.json`, restart the service: `nullclaw config reload` only validates.
@@ -113,6 +115,25 @@ starts a new run with a clean log,
 so it does not loop on the same warning. A channel with a bad token fails
 its health check every time, so it gets restarted every interval until fixed.
 Check what it did with `journalctl -u nullclaw-watchdog`.
+
+### Hardening
+
+NullClaw's own `security.sandbox` does not isolate anything on NixOS:
+Landlock is still a stub upstream (`isAvailable()` returns false, and an
+explicit `backend = "landlock"` silently falls back to no sandbox; see
+nullclaw/nullclaw#882), and the firejail, bubblewrap and docker backends run
+commands with no network, without `/nix/store`, or inside Alpine, which also
+defeats an agent meant to look at the host. `nullclaw status` still says
+"Sandbox: enabled".
+
+With `hardening.enable = true`, systemd confines the gateway and every command
+its agent runs instead: `ProtectSystem=strict` and `ProtectHome=read-only`
+make the whole filesystem read-only except `stateDir` (plus
+`hardening.readWritePaths`), `PrivateTmp`, `NoNewPrivileges` (setuid is
+ignored, so `sudo` cannot work), and the kernel tunables, modules, logs,
+cgroups, clock and hostname are protected. Network, processes (`/proc`) and
+devices are left visible, so the agent can still monitor the machine; it just
+cannot change files outside `stateDir`.
 
 ## Updating
 

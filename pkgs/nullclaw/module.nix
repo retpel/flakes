@@ -63,6 +63,28 @@ in {
         description = "How often the watchdog checks (systemd time span).";
       };
     };
+    hardening = {
+      enable = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Confine the gateway and every command its agent runs with systemd
+          sandboxing: the whole filesystem read-only except `stateDir` (and a
+          private /tmp), no privilege gain (setuid, so no sudo), kernel
+          tunables/modules/cgroups protected. NullClaw's own `sandbox` setting
+          does nothing useful on NixOS (Landlock is a stub upstream, and
+          firejail/bubblewrap/docker hide the host), so this is the
+          enforcement. Network, processes and devices stay visible, so the
+          agent can still monitor the machine. NixOS only.
+        '';
+      };
+      readWritePaths = mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        example = [ "/home/alice/notes" ];
+        description = "Extra paths the gateway may write to, besides `stateDir`.";
+      };
+    };
   };
 
   config = mkIf cfg.enable (mkMerge [
@@ -134,6 +156,26 @@ in {
           EnvironmentFile = optional (cfg.environmentFile != null) "-${cfg.environmentFile}";
           Restart = "always";
           RestartSec = 3;
+        }
+        // optionalAttrs cfg.hardening.enable {
+          # Read everything, write only stateDir. No PrivateNetwork,
+          # ProtectProc=invisible or PrivateDevices: those would hide the
+          # network, other processes and block devices from the agent.
+          ProtectSystem = "strict";
+          ProtectHome = "read-only";
+          ReadWritePaths = [ cfg.stateDir ] ++ cfg.hardening.readWritePaths;
+          PrivateTmp = true;
+          NoNewPrivileges = true;
+          RestrictSUIDSGID = true;
+          ProtectKernelTunables = true;
+          ProtectKernelModules = true;
+          ProtectKernelLogs = true;
+          ProtectControlGroups = true;
+          ProtectClock = true;
+          ProtectHostname = true;
+          LockPersonality = true;
+          RestrictRealtime = true;
+          RestrictNamespaces = true;
         };
       };
 

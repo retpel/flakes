@@ -37,6 +37,10 @@ day until `update.sh` runs; its `update.sh` exits 0 when the assets are mid-uplo
 `nullclaw-watchdog` timer greps the current invocation's journal for
 ` issue: (polling thread stale|health check failed)` (strings from upstream
 `src/channel_manager.zig`); recheck them when bumping nullclaw.
+`hardening.enable` adds systemd confinement (read-only FS except `stateDir`,
+`NoNewPrivileges`); keep network, `/proc` and devices visible (no
+`PrivateNetwork`, `ProtectProc=invisible`, `PrivateDevices`) so a monitoring
+agent still sees the host. Recheck #882 (Landlock) when bumping nullclaw.
 
 **rayfish**: see `pkgs/rayfish/README.md`. Services run `libexec/rayfish/ray`
 directly, never the guarded `bin/ray`; don't loosen `ray-guard.sh`. Detect
