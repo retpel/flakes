@@ -47,7 +47,7 @@ in {
     watchdog = {
       enable = mkOption {
         type = types.bool;
-        default = true;
+        default = false;
         description = ''
           Restart the gateway when one of its polling channels (e.g. Telegram)
           gets stuck. NullClaw restarts a stale channel thread itself, but that
