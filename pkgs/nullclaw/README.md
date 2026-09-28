@@ -85,6 +85,8 @@ reachable from every configured channel. Review `autonomy` and each channel's
 | `services.nullclaw.user` | (required) | User it runs as; must be declared in `users.users`. |
 | `services.nullclaw.stateDir` | `<home>/.nullclaw` | `NULLCLAW_HOME`: `config.json`, `auth.json`, workspace. |
 | `services.nullclaw.environmentFile` | `<stateDir>/.env` | `KEY=value` file for the gateway (e.g. API keys); skipped if missing. `null` disables it. |
+| `services.nullclaw.watchdog.enable` | `true` | Restart the gateway when a polling channel gets stuck (see below). NixOS only. |
+| `services.nullclaw.watchdog.interval` | `"5min"` | How often the watchdog checks. |
 
 Run `nullclaw onboard` as `user` first, so `stateDir` exists. After editing
 `config.json`, restart the service: `nullclaw config reload` only validates.
@@ -94,6 +96,22 @@ Run `nullclaw onboard` as `user` first, so `stateDir` exists. After editing
 - **macOS:** launchd daemon `com.nullclaw.gateway` running as `user`
   (`KeepAlive`), logging to `<stateDir>/gateway.log`. It waits for the Nix store
   at boot. Restart with `sudo launchctl kickstart -k system/com.nullclaw.gateway`.
+
+### Watchdog
+
+NullClaw restarts a stale channel thread itself (`<channel> issue: polling
+thread stale`, then `Restarting <channel> (attempt N)`), but that restart first
+joins the old thread. If the old thread is stuck in a request, the join never
+returns: the process stays up, the channel stays dead, and `Restart=always`
+never fires. Seen with Telegram in v2026.5.29.
+
+On NixOS the `nullclaw-watchdog` timer checks the log of the current run
+(`_SYSTEMD_INVOCATION_ID`) every `watchdog.interval` and restarts
+`nullclaw.service` when it finds ` issue: polling thread stale` or
+` issue: health check failed`. Restarting starts a new run with a clean log,
+so it does not loop on the same warning. A channel with a bad token fails
+its health check every time, so it gets restarted every interval until fixed.
+Check what it did with `journalctl -u nullclaw-watchdog`.
 
 ## Updating
 

@@ -44,6 +44,25 @@ in {
         the launcher shell.
       '';
     };
+    watchdog = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Restart the gateway when one of its polling channels (e.g. Telegram)
+          gets stuck. NullClaw restarts a stale channel thread itself, but that
+          restart joins the old thread and hangs forever if the thread is stuck
+          in a request: the process stays up and `Restart=always` never fires.
+          A timer checks the current run's log for the stale/health warning and
+          restarts the whole service. NixOS only.
+        '';
+      };
+      interval = mkOption {
+        type = types.str;
+        default = "5min";
+        description = "How often the watchdog checks (systemd time span).";
+      };
+    };
   };
 
   config = mkIf cfg.enable (mkMerge [
@@ -115,6 +134,31 @@ in {
           EnvironmentFile = optional (cfg.environmentFile != null) "-${cfg.environmentFile}";
           Restart = "always";
           RestartSec = 3;
+        };
+      };
+
+      # Only this run's log (by invocation ID), so the restart it triggers
+      # starts clean and cannot loop on an old warning.
+      systemd.services.nullclaw-watchdog = mkIf cfg.watchdog.enable {
+        description = "Restart NullClaw when a channel is stuck";
+        serviceConfig.Type = "oneshot";
+        script = ''
+          systemctl is-active --quiet nullclaw.service || exit 0
+          id=$(systemctl show --property=InvocationID --value nullclaw.service)
+          [ -n "$id" ] || exit 0
+          if journalctl --quiet --output=cat _SYSTEMD_INVOCATION_ID="$id" \
+              | grep -qE ' issue: (polling thread stale|health check failed)'; then
+            echo "nullclaw: a channel is stuck, restarting nullclaw.service"
+            systemctl restart nullclaw.service
+          fi
+        '';
+        path = [ config.systemd.package pkgs.gnugrep ];
+      };
+      systemd.timers.nullclaw-watchdog = mkIf cfg.watchdog.enable {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = cfg.watchdog.interval;
+          OnUnitActiveSec = cfg.watchdog.interval;
         };
       };
     })
