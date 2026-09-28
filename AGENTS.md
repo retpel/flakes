@@ -35,8 +35,9 @@ day until `update.sh` runs; its `update.sh` exits 0 when the assets are mid-uplo
 `NULLCLAW_HOME`, mirroring upstream's `service install` unit but always pointing at
 `cfg.package`. Keep `enable` off by default and `user` required. The NixOS
 `nullclaw-watchdog` timer greps the current invocation's journal for
-` issue: (polling thread stale|health check failed)` (strings from upstream
-`src/channel_manager.zig`); recheck them when bumping nullclaw.
+` issue: polling thread stale` only (string from upstream
+`src/channel_manager.zig`; `health check failed` is transient, don't restart on
+it); recheck it when bumping nullclaw.
 `hardening.enable` adds systemd confinement (read-only FS except `stateDir`,
 `NoNewPrivileges`); keep network, `/proc` and devices visible (no
 `PrivateNetwork`, `ProtectProc=invisible`, `PrivateDevices`) so a monitoring

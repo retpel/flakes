@@ -53,7 +53,7 @@ in {
           gets stuck. NullClaw restarts a stale channel thread itself, but that
           restart joins the old thread and hangs forever if the thread is stuck
           in a request: the process stays up and `Restart=always` never fires.
-          A timer checks the current run's log for the stale/health warning and
+          A timer checks the current run's log for the stale-thread warning and
           restarts the whole service. NixOS only.
         '';
       };
@@ -189,7 +189,7 @@ in {
           id=$(systemctl show --property=InvocationID --value nullclaw.service)
           [ -n "$id" ] || exit 0
           if journalctl --quiet --output=cat _SYSTEMD_INVOCATION_ID="$id" \
-              | grep -qE ' issue: (polling thread stale|health check failed)'; then
+              | grep -q ' issue: polling thread stale'; then
             echo "nullclaw: a channel is stuck, restarting nullclaw.service"
             systemctl restart nullclaw.service
           fi

@@ -110,10 +110,11 @@ never fires. Seen with Telegram in v2026.5.29.
 Opt in with `watchdog.enable = true`. On NixOS the `nullclaw-watchdog` timer
 then checks the log of the current run (`_SYSTEMD_INVOCATION_ID`) every
 `watchdog.interval` and restarts `nullclaw.service` when it finds
-` issue: polling thread stale` or ` issue: health check failed`. Restarting
-starts a new run with a clean log,
-so it does not loop on the same warning. A channel with a bad token fails
-its health check every time, so it gets restarted every interval until fixed.
+` issue: polling thread stale`: the case that can hang. Restarting starts a
+new run with a clean log, so it does not loop on the same warning. A single
+` issue: health check failed` is left alone: it shows up for a transient
+Telegram API error (seen during a long agent turn) and restarting then would
+cut off the reply in progress.
 Check what it did with `journalctl -u nullclaw-watchdog`.
 
 ### Hardening
