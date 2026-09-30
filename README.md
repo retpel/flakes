@@ -14,6 +14,7 @@ Nix packages by `Prompter`.
 
 | Package | Description |
 |---|---|
+| [1mcp](pkgs/1mcp) | Unified MCP runtime that aggregates MCP servers behind one endpoint, with a NixOS service module |
 | [nullclaw](pkgs/nullclaw) | Small, fully autonomous AI assistant in one static Zig binary, with a nix-darwin/NixOS service module |
 | [nullclaw-nightly](pkgs/nullclaw) | NullClaw's rolling nightly build, bumped daily |
 | [nullclaw-chat-ui](pkgs/nullclaw-chat-ui) | NullClaw's web chat UI as static files, to serve from any web server |
