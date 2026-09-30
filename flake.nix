@@ -18,7 +18,17 @@
       pkgDirs = lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./pkgs);
       packageNames = builtins.attrNames pkgDirs;
 
-      pkgsFor = eachSystem (system: nixpkgs.legacyPackages.${system});
+      # Unfree packages this flake's own `packages` allow. Overlay users allow
+      # them in their own nixpkgs config.
+      allowedUnfree = [ "littlesnitch" ];
+
+      pkgsFor = eachSystem (
+        system:
+        import nixpkgs {
+          inherit system;
+          config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) allowedUnfree;
+        }
+      );
 
       # All packages built against `pkgs`, in one scope so they can depend on
       # each other by argument name.

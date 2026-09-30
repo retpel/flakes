@@ -47,6 +47,14 @@ agent still sees the host. Recheck #882 (Landlock) when bumping nullclaw.
 upstream release archive's `build/`; never add a Node build. Upstream declares no
 license, so `meta.license` stays unset.
 
+**littlesnitch**: unfree freeware whose license allows redistribution only of
+the unmodified binary: keep `dontFixup` (no strip/patchelf; it is static musl).
+`allowedUnfree` in `flake.nix` lets this flake's own `packages` build it. Linux
+only. `nixos-module.nix` mirrors upstream's `littlesnitch.service` (sandboxing,
+capability bounding set) except `AssertCapability=`; recheck the unit in the
+tarball when bumping. `update.sh` reads the version from the
+`releases/<version>` tag on obdev/littlesnitch-linux, downloads from obdev.at.
+
 **rayfish**: see `pkgs/rayfish/README.md`. Services run `libexec/rayfish/ray`
 directly, never the guarded `bin/ray`; don't loosen `ray-guard.sh`. Detect
 nix-darwin in `module.nix` with `options ? launchd`, not `pkgs.stdenv`
