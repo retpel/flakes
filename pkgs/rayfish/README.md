@@ -49,7 +49,7 @@ detects nix-darwin from the `launchd` option.
 |---|---|---|---|
 | `services.rayfish.enable` | `false` | both | Run the Rayfish daemon and put `ray` on `PATH`. |
 | `services.rayfish.package` | this flake's package | both | Rayfish package to run. No overlay needed. |
-| `services.rayfish.resolver.enable` | `true` | macOS | Write `/etc/resolver/ray` so `.ray` names resolve through Rayfish's DNS (`200::53`) instead of another VPN's local resolver. |
+| `services.rayfish.resolver.enable` | `true` | both | Resolve `.ray` names through Rayfish's DNS (`200::53`) instead of another VPN's local resolver. macOS: writes `/etc/resolver/ray`. NixOS: enables systemd-resolved (`mkDefault`), and Rayfish's Magic DNS sets `200::53` and its `.ray` domains on `rayfish0` over D-Bus. With another VPN owning `/etc/resolv.conf` (e.g. WARP), Rayfish also adds `200::53` ahead of that VPN's resolver there. |
 | `services.rayfish.rayFix.enable` | `true` | macOS | Install `sudo ray-fix`, which points the Rayfish DNS and active peer routes back at the Rayfish utun after Rayfish or another VPN (e.g. WARP) replaces a utun interface or address. |
 | `services.rayfish.logFilter` | `null` | both | `RUST_LOG` for the daemon, e.g. `"info,iroh::net_report=error"` to drop the "IPv4 address detected by QAD varies by destination" warnings behind hard NAT. Replaces Rayfish's own filters, so its daily file log loses `rayfish=debug` detail. |
 

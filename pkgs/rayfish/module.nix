@@ -61,9 +61,12 @@ in {
       type = types.bool;
       default = true;
       description = ''
-        Send `.ray` DNS queries to Rayfish's resolver (200::53) through
-        /etc/resolver/ray, so they don't go to another VPN's local resolver.
-        macOS only.
+        Send `.ray` DNS queries to Rayfish's resolver (200::53), so they don't
+        go to another VPN's local resolver. On macOS this writes
+        /etc/resolver/ray. On NixOS it enables systemd-resolved, and Rayfish's
+        Magic DNS puts 200::53 and its .ray domains on rayfish0 through
+        resolved's D-Bus API. With another VPN owning /etc/resolv.conf (e.g.
+        WARP), Rayfish also adds 200::53 ahead of that VPN's resolver there.
       '';
     };
     rayFix.enable = mkOption {
@@ -135,6 +138,8 @@ in {
     })
 
     (optionalAttrs (!isDarwin) {
+      services.resolved.enable = mkIf cfg.resolver.enable (mkDefault true);
+
       systemd.services.rayfish = {
         description = "Rayfish mesh VPN daemon";
         wantedBy = [ "multi-user.target" ];
